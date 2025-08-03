@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  fastapi_backend:
+    build: ./fastapi-app
+    container_name: fastapi_backend
+    ports:
+      - "3028:8000"
+    volumes:
+      - ./fastapi-app:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    networks:
+      - app-network
+
+  react_frontend:
+    build: ./my-react-app
+    container_name: react_frontend
+    ports:
+      - "3029:80"
+    volumes:
+      - ./my-react-app:/app
+    depends_on:
+      - fastapi_backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

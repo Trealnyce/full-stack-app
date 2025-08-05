@@ -1,6 +1,6 @@
 # === Stage 1: Build the React application ===
-# Use a more robust Node.js image for building the app
-FROM node:18 as build-stage
+# Use a lightweight Node.js image for building the app
+FROM node:18-alpine as build-stage
 
 # Set the working directory
 WORKDIR /app
@@ -8,8 +8,9 @@ WORKDIR /app
 # Copy the package.json and package-lock.json to install dependencies
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Failsafe step: Clear the npm cache and then install dependencies.
+# The `|| true` part ensures the script doesn't fail if the cache folder doesn't exist.
+RUN npm cache clean --force || true && npm install
 
 # Copy all the frontend source files
 COPY . .

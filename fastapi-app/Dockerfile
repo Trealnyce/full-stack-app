@@ -1,18 +1,19 @@
-# Use an official Python runtime as a parent image
+# Dockerfile for FastAPI app
+
+# Use a Python base image
 FROM python:3.9-slim
 
 # Set the working directory in the container
-WORKDIR /app
+WORKDIR /code
 
-# Install any needed packages specified in requirements.txt
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the requirements file and install the dependencies
+COPY ./requirements.txt /code/requirements.txt
 
-# Copy the rest of the application code into the container
-COPY . .
+# Install the required Python packages
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Expose the port that the app will run on
+# Copy the rest of the application code
+COPY ./ /code/
+
+# Expose the port that Uvicorn will run on
 EXPOSE 8000
-
-# Run the Uvicorn server when the container launches
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

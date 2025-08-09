@@ -1,16 +1,14 @@
+# main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Initialize the FastAPI app
 app = FastAPI()
 
-# Configure CORS
-# This is crucial for allowing the React frontend (running on a different port)
-# to communicate with this backend.
+# Configure CORS to allow the React frontend to talk to the backend
 origins = [
-    "http://localhost",
-    "http://localhost:80",
-    "http://localhost:3000",
+    "http://192.168.1.231:3028",  # The URL of your React app
+    "http://localhost:3028",
+    "http://localhost:8000"
 ]
 
 app.add_middleware(
@@ -21,10 +19,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define the root endpoint
+# A simple "Hello, World!" endpoint at the root URL
 @app.get("/")
 def read_root():
     """
-    Returns a simple JSON message.
+    Returns a simple welcome message for the API.
     """
-    return {"message": "Hello from the FastAPI backend!"}
+    return {"message": "Vehicle Photo Uploader API is Running!"}
+
+# New endpoint to simulate QR code generation
+@app.post("/qr_code")
+def generate_qr_code(vehicle_number: str):
+    """
+    Simulates generating a QR code for a given vehicle number.
+    Returns a placeholder URL for the photo upload app.
+    """
+    # In the future, this will generate a real QR code and a unique upload URL
+    upload_url = f"https://trucks.approvedwarehouse.com/upload?vehicle={vehicle_number}"
+    return {"message": f"QR code for vehicle {vehicle_number} requested.", "upload_url": upload_url}

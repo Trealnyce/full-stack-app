@@ -1,29 +1,19 @@
+# Use version 3.8 of the Docker Compose file format
 version: '3.8'
 
+# Define the services (containers) that make up your application
 services:
-  fastapi_backend:
-    build: ./fastapi-app
-    container_name: fastapi_backend
+  # This is the name of our service
+  my-react-app:
+    # Set the build context to the my-react-app directory.
+    # This tells Docker to go into that directory to find the Dockerfile and source code.
+    build:
+      context: ./my-react-app
+    # The container name helps with identification in Portainer and other Docker tools
+    container_name: my-react-app-container
+    # Map port 80 in the container (where Nginx is serving the app) to port 3028 on the host machine.
+    # The format is 'HOST_PORT:CONTAINER_PORT'
     ports:
-      - "3028:8000"
-    volumes:
-      - ./fastapi-app:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-    networks:
-      - app-network
-
-  react_frontend:
-    build: ./my-react-app
-    container_name: react_frontend
-    ports:
-      - "3029:80"
-    volumes:
-      - ./my-react-app:/app
-    depends_on:
-      - fastapi_backend
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+      - "3028:80"
+    # Restart the container automatically if it crashes or the host reboots
+    restart: unless-stopped

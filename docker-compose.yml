@@ -3,17 +3,34 @@ version: '3.8'
 
 # Define the services (containers) that make up your application
 services:
-  # This is the name of our service
   my-react-app:
     # Set the build context to the my-react-app directory.
-    # This tells Docker to go into that directory to find the Dockerfile and source code.
     build:
       context: ./my-react-app
     # The container name helps with identification in Portainer and other Docker tools
     container_name: my-react-app-container
-    # Map port 80 in the container (where Nginx is serving the app) to port 3028 on the host machine.
-    # The format is 'HOST_PORT:CONTAINER_PORT'
+    # Map port 3028 on the host to port 80 in the container
     ports:
       - "3028:80"
     # Restart the container automatically if it crashes or the host reboots
+    restart: unless-stopped
+
+  fastapi-app:
+    # Set the build context to the fastapi-app directory.
+    build:
+      context: ./fastapi-app
+    # The container name helps with identification
+    container_name: fastapi-app-container
+    # Map port 3027 on the host to port 8000 in the container
+    ports:
+      - "3027:8000"
+    # Set a working directory inside the container
+    working_dir: /code
+    # This volume mount is the key fix. It syncs your local fastapi-app directory
+    # with the /code directory in the container, ensuring the latest code is always used.
+    volumes:
+      - ./fastapi-app:/code
+    # Run the uvicorn server
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # Restart the container
     restart: unless-stopped

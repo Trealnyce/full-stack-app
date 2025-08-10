@@ -4,16 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Configure CORS to allow the React frontend to talk to the backend
-origins = [
-    "http://192.168.1.231:3028",  # The URL of your React app
-    "http://localhost:3028",
-    "http://localhost:8000"
-]
-
+# Configure CORS to allow the React frontend to talk to the backend.
+# The `allow_origins=["*"]` setting allows requests from any origin,
+# which is necessary for internal container-to-container communication in Docker.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allowing all origins to fix the communication issue
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

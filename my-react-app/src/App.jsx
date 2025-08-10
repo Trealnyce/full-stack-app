@@ -19,8 +19,8 @@ function App() {
     setLoading(true);
 
     try {
-      // CORRECTED: Use the service name 'fastapi-app' as the hostname
-      const response = await fetch('http://fastapi-app:8000/qr_code', {
+      // THIS IS THE CRITICAL LINE: Use the public IP address and port
+      const response = await fetch('http://192.168.1.231:3027/qr_code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +36,7 @@ function App() {
 
       const data = await response.json();
       console.log('API Response:', data);
-      
+
       // Update the state with the URL from the backend
       setQrCodeUrl(data.upload_url);
     } catch (e) {

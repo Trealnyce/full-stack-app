@@ -1,6 +1,11 @@
 # main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Define a Pydantic model to receive the JSON data from the frontend
+class VehicleNumberRequest(BaseModel):
+    vehicle_number: str
 
 app = FastAPI()
 
@@ -25,11 +30,12 @@ def read_root():
 
 # New endpoint to simulate QR code generation
 @app.post("/qr_code")
-def generate_qr_code(vehicle_number: str):
+def generate_qr_code(request: VehicleNumberRequest):
     """
     Simulates generating a QR code for a given vehicle number.
     Returns a placeholder URL for the photo upload app.
     """
     # In the future, this will generate a real QR code and a unique upload URL
+    vehicle_number = request.vehicle_number
     upload_url = f"https://trucks.approvedwarehouse.com/upload?vehicle={vehicle_number}"
     return {"message": f"QR code for vehicle {vehicle_number} requested.", "upload_url": upload_url}

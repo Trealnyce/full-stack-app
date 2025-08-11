@@ -1,5 +1,6 @@
 // src/App.jsx
 import { useState } from 'react';
+import QRCode from 'react-qr-code'; // Import the QR code component
 import './index.css';
 
 function App() {
@@ -19,7 +20,7 @@ function App() {
     setLoading(true);
 
     try {
-      // THIS IS THE CRITICAL LINE: Use the public IP address and port
+      // Use the public IP address and port to communicate with the FastAPI backend
       const response = await fetch('http://192.168.1.231:3027/qr_code', {
         method: 'POST',
         headers: {
@@ -89,15 +90,19 @@ function App() {
         )}
 
         {qrCodeUrl && (
-          <div className="mt-6 text-center">
-            <p className="text-gray-700 font-semibold mb-2">
-              QR Code URL Generated!
+          <div className="mt-6 flex flex-col items-center space-y-4">
+            <p className="text-gray-700 font-semibold text-center">
+              Scan this QR code to upload photos:
             </p>
+            {/* The QR code component */}
+            <div className="p-2 bg-white rounded-md shadow-md">
+              <QRCode value={qrCodeUrl} />
+            </div>
             <a
               href={qrCodeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-indigo-600 underline break-words"
+              className="text-indigo-600 underline break-words text-center"
             >
               {qrCodeUrl}
             </a>

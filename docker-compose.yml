@@ -26,10 +26,6 @@ services:
       - "3027:8000"
     # Set a working directory inside the container
     working_dir: /code
-    # This volume mount is the key fix. It syncs your local fastapi-app directory
-    # with the /code directory in the container, ensuring the latest code is always used.
-    volumes:
-      - ./fastapi-app:/code
     # Run the uvicorn server
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     # Restart the container

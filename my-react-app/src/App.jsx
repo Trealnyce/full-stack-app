@@ -1,36 +1,113 @@
 // src/App.jsx
-import { useState } from 'react';
-import QRCode from 'react-qr-code'; // Import the QR code component
+import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import './index.css';
 
+// A new component to handle the photo upload page
+const PhotoUploader = ({ vehicleNumber }) => {
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [message, setMessage] = useState('');
+
+  // Handler for when a file is selected
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
+    }
+  };
+
+  // Handler for the upload button (this is a placeholder for now)
+  const handleUpload = () => {
+    if (!file) {
+      setMessage('Please select a file to upload.');
+      return;
+    }
+    setMessage(`Uploading photo for vehicle ${vehicleNumber}...`);
+    // In a future step, we will add the actual fetch call to upload the image
+    // For now, we'll just simulate a successful upload
+    setTimeout(() => {
+      setMessage('Photo uploaded successfully!');
+    }, 2000);
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">
+        <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">
+          Upload Photo for Vehicle: {vehicleNumber}
+        </h1>
+        <p className="text-center text-gray-600 mb-8">
+          Select a photo to upload.
+        </p>
+        
+        <div className="flex flex-col items-center space-y-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full text-gray-700 font-semibold mb-2"
+          />
+
+          {previewUrl && (
+            <div className="w-full max-w-xs overflow-hidden rounded-lg shadow-md">
+              <img src={previewUrl} alt="Preview" className="w-full h-auto object-cover" />
+            </div>
+          )}
+
+          <button
+            onClick={handleUpload}
+            disabled={!file}
+            className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed"
+          >
+            Upload
+          </button>
+        </div>
+        
+        {message && (
+          <p className="mt-4 text-center text-green-600 font-medium">
+            {message}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 function App() {
-  // State to hold the vehicle number from the input field
+  // Use state to track the current view (qr_generator or photo_uploader)
+  const [currentPage, setCurrentPage] = useState('qr_generator');
   const [vehicleNumber, setVehicleNumber] = useState('');
-  // State to hold the URL returned from the FastAPI backend
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  // State for loading and error messages
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Function to handle the API call to the FastAPI backend
+  // Check the URL for a vehicle number to determine the page to show
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vehicle = urlParams.get('vehicle');
+    if (vehicle) {
+      setVehicleNumber(vehicle);
+      setCurrentPage('photo_uploader');
+    }
+  }, []);
+
   const generateQRCode = async () => {
-    // Clear previous results and set loading state
     setQrCodeUrl('');
     setError(null);
     setLoading(true);
 
     try {
-      // Use the public IP address and port to communicate with the FastAPI backend
       const response = await fetch('http://192.168.1.231:3027/qr_code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // Send the vehicle number in the request body
         body: JSON.stringify({ vehicle_number: vehicleNumber }),
       });
 
-      // Check if the response was successful
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -38,7 +115,6 @@ function App() {
       const data = await response.json();
       console.log('API Response:', data);
 
-      // Update the state with the URL from the backend
       setQrCodeUrl(data.upload_url);
     } catch (e) {
       console.error('Failed to fetch QR code URL:', e);
@@ -48,6 +124,12 @@ function App() {
     }
   };
 
+  // Render the appropriate component based on the current page state
+  if (currentPage === 'photo_uploader') {
+    return <PhotoUploader vehicleNumber={vehicleNumber} />;
+  }
+
+  // Default view: QR code generator
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">
@@ -58,7 +140,6 @@ function App() {
           Enter a vehicle number to generate a QR code for photo uploads.
         </p>
 
-        {/* Input field for the vehicle number */}
         <div className="mb-4">
           <label htmlFor="vehicleNumber" className="block text-gray-700 font-semibold mb-2">
             Vehicle Number
@@ -73,7 +154,6 @@ function App() {
           />
         </div>
 
-        {/* Button to trigger the API call */}
         <button
           onClick={generateQRCode}
           disabled={!vehicleNumber || loading}
@@ -82,7 +162,6 @@ function App() {
           {loading ? 'Generating...' : 'Generate QR Code'}
         </button>
 
-        {/* Display results, loading, or error messages */}
         {error && (
           <p className="mt-4 text-center text-red-500 font-medium">
             {error}
@@ -94,7 +173,6 @@ function App() {
             <p className="text-gray-700 font-semibold text-center">
               Scan this QR code to upload photos:
             </p>
-            {/* The QR code component */}
             <div className="p-2 bg-white rounded-md shadow-md">
               <QRCode value={qrCodeUrl} />
             </div>

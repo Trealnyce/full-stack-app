@@ -17,6 +17,7 @@ services:
 
   fastapi-app:
     # Set the build context to the fastapi-app directory.
+    # Docker Compose will now use the Dockerfile within this directory.
     build:
       context: ./fastapi-app
     # The container name helps with identification
@@ -24,9 +25,5 @@ services:
     # Map port 3027 on the host to port 8000 in the container
     ports:
       - "3027:8000"
-    # Set a working directory inside the container
-    working_dir: /code
-    # Run the uvicorn server
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     # Restart the container
     restart: unless-stopped

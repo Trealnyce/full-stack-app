@@ -17,7 +17,6 @@ services:
 
   fastapi-app:
     # Set the build context to the fastapi-app directory.
-    # Docker Compose will now use the Dockerfile within this directory.
     build:
       context: ./fastapi-app
     # The container name helps with identification

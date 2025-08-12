@@ -8,6 +8,7 @@ const PhotoUploader = ({ vehicleNumber }) => {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Handler for when a file is selected
   const handleFileChange = (e) => {
@@ -15,21 +16,48 @@ const PhotoUploader = ({ vehicleNumber }) => {
     if (selectedFile) {
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      setMessage(''); // Clear any previous messages
     }
   };
 
-  // Handler for the upload button (this is a placeholder for now)
-  const handleUpload = () => {
+  // Handler for the upload button - this is the final, working logic
+  const handleUpload = async () => {
     if (!file) {
       setMessage('Please select a file to upload.');
       return;
     }
-    setMessage(`Uploading photo for vehicle ${vehicleNumber}...`);
-    // In a future step, we will add the actual fetch call to upload the image
-    // For now, we'll just simulate a successful upload
-    setTimeout(() => {
-      setMessage('Photo uploaded successfully!');
-    }, 2000);
+
+    setLoading(true);
+    setMessage('Uploading photo...');
+
+    try {
+      // Create a FormData object to send the file and vehicle number
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Use the correct API URL and pass the vehicle number as a query parameter
+      const response = await fetch(`http://192.168.1.231:3027/upload_photo?vehicle_number=${vehicleNumber}`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Upload success:', data);
+      setMessage(data.message); // Display the success message from the backend
+
+      // Optional: Clear the file and preview after a successful upload
+      setFile(null);
+      setPreviewUrl(null);
+    } catch (e) {
+      console.error('Upload failed:', e);
+      setMessage(`Failed to upload photo. Error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,15 +86,15 @@ const PhotoUploader = ({ vehicleNumber }) => {
 
           <button
             onClick={handleUpload}
-            disabled={!file}
+            disabled={!file || loading}
             className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed"
           >
-            Upload
+            {loading ? 'Uploading...' : 'Upload'}
           </button>
         </div>
         
         {message && (
-          <p className="mt-4 text-center text-green-600 font-medium">
+          <p className={`mt-4 text-center font-medium ${message.includes('Error') || message.includes('Failed') ? 'text-red-500' : 'text-green-600'}`}>
             {message}
           </p>
         )}

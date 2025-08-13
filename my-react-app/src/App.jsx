@@ -5,38 +5,43 @@ import './index.css';
 
 // A new component to handle the photo upload page
 const PhotoUploader = ({ vehicleNumber }) => {
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  // Use state to hold an array of files and their preview URLs
+  const [files, setFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Handler for when a file is selected
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
+    const newFile = e.target.files[0];
+    if (newFile && files.length < 4) {
+      setFiles(prevFiles => [...prevFiles, newFile]);
+      setPreviewUrls(prevUrls => [...prevUrls, URL.createObjectURL(newFile)]);
       setMessage(''); // Clear any previous messages
+    } else if (files.length >= 4) {
+      setMessage('You can only upload a maximum of 4 photos.');
     }
   };
 
   // Handler for the upload button - this is the final, working logic
   const handleUpload = async () => {
-    if (!file) {
-      setMessage('Please select a file to upload.');
+    if (files.length !== 4) {
+      setMessage('Please select exactly 4 photos to upload.');
       return;
     }
 
     setLoading(true);
-    setMessage('Uploading photo...');
+    setMessage('Uploading photos...');
 
     try {
-      // Create a FormData object to send the file and vehicle number
+      // Create a FormData object to send all files
       const formData = new FormData();
-      formData.append('file', file);
+      files.forEach(file => {
+        formData.append('files', file); // Note: we are now appending with 'files'
+      });
       
-      // Use the correct API URL and pass the vehicle number as a query parameter
-      const response = await fetch(`http://192.168.1.231:3027/upload_photo?vehicle_number=${vehicleNumber}`, {
+      // Use the correct API URL and pass the vehicle number
+      const response = await fetch(`https://vehicledamage.molyneaux.xyz/upload_photos?vehicle_number=${vehicleNumber}`, {
         method: 'POST',
         body: formData,
       });
@@ -49,12 +54,12 @@ const PhotoUploader = ({ vehicleNumber }) => {
       console.log('Upload success:', data);
       setMessage(data.message); // Display the success message from the backend
 
-      // Optional: Clear the file and preview after a successful upload
-      setFile(null);
-      setPreviewUrl(null);
+      // Clear the files and previews after a successful upload
+      setFiles([]);
+      setPreviewUrls([]);
     } catch (e) {
       console.error('Upload failed:', e);
-      setMessage(`Failed to upload photo. Error: ${e.message}`);
+      setMessage(`Failed to upload photos. Error: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -64,10 +69,10 @@ const PhotoUploader = ({ vehicleNumber }) => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">
         <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">
-          Upload Photo for Vehicle: {vehicleNumber}
+          Upload Photos for Vehicle: {vehicleNumber}
         </h1>
         <p className="text-center text-gray-600 mb-8">
-          Select a photo to upload.
+          Select up to 4 photos to upload.
         </p>
         
         <div className="flex flex-col items-center space-y-4">
@@ -76,20 +81,23 @@ const PhotoUploader = ({ vehicleNumber }) => {
             accept="image/*"
             onChange={handleFileChange}
             className="w-full text-gray-700 font-semibold mb-2"
+            disabled={files.length >= 4}
           />
-
-          {previewUrl && (
-            <div className="w-full max-w-xs overflow-hidden rounded-lg shadow-md">
-              <img src={previewUrl} alt="Preview" className="w-full h-auto object-cover" />
-            </div>
-          )}
+          
+          <div className="grid grid-cols-2 gap-4 w-full">
+            {previewUrls.map((url, index) => (
+              <div key={index} className="w-full overflow-hidden rounded-lg shadow-md">
+                <img src={url} alt={`Preview ${index + 1}`} className="w-full h-auto object-cover" />
+              </div>
+            ))}
+          </div>
 
           <button
             onClick={handleUpload}
-            disabled={!file || loading}
+            disabled={files.length !== 4 || loading}
             className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed"
           >
-            {loading ? 'Uploading...' : 'Upload'}
+            {loading ? 'Uploading...' : `Upload (${files.length} / 4)`}
           </button>
         </div>
         
@@ -128,12 +136,13 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://192.168.1.231:3027/qr_code', {
+      const response = await fetch('https://qrcode.molyneaux.xyz/qr_code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ vehicle_number: vehicleNumber }),
+        // The QR code now points to the new domain
+        body: JSON.stringify({ upload_url: `https://vehicledamage.molyneaux.xyz/?vehicle=${vehicleNumber}` }),
       });
 
       if (!response.ok) {

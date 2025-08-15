@@ -15,8 +15,6 @@ function App() {
     setLoading(true);
 
     try {
-      // This app's sole purpose is to generate a QR code.
-      // It makes a POST request to the API to get the final URL.
       const response = await fetch('https://api.molyneaux.xyz/qr_code', {
         method: 'POST',
         headers: {

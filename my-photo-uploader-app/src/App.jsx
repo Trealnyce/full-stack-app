@@ -106,7 +106,6 @@ const PhotoUploader = ({ vehicleNumber }) => {
 function App() {
   const [vehicleNumber, setVehicleNumber] = useState('');
   
-  // This useEffect will parse the URL for the vehicle number
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const vehicle = urlParams.get('vehicle');
@@ -115,12 +114,10 @@ function App() {
     }
   }, []);
 
-  // Only render the PhotoUploader if a vehicle number is present
   if (vehicleNumber) {
     return <PhotoUploader vehicleNumber={vehicleNumber} />;
   }
 
-  // Otherwise, display a message that this page requires a vehicle number
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md text-center">

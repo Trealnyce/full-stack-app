@@ -12,9 +12,9 @@ app = FastAPI()
 
 # Add CORS middleware to allow requests from the React frontend
 origins = [
-    "http://192.168.1.231:3028",
     "https://qrcode.molyneaux.xyz",
     "https://vehicledamage.molyneaux.xyz",
+    "https://api.molyneaux.xyz" # Add the new API domain
 ]
 
 app.add_middleware(

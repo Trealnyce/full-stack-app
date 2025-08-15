@@ -1,28 +1,39 @@
-# Use version 3.8 of the Docker Compose file format
+# docker-compose.yml
 version: '3.8'
 
-# Define the services (containers) that make up your application
 services:
-  my-react-app:
-    # Set the build context to the my-react-app directory.
-    build:
-      context: ./my-react-app
-    # The container name helps with identification in Portainer and other Docker tools
-    container_name: my-react-app-container
-    # Map port 3028 on the host to port 80 in the container
-    ports:
-      - "3028:80"
-    # Restart the container automatically if it crashes or the host reboots
-    restart: unless-stopped
-
+  # The FastAPI backend service
   fastapi-app:
-    # Set the build context to the fastapi-app directory.
     build:
       context: ./fastapi-app
-    # The container name helps with identification
+      dockerfile: Dockerfile
     container_name: fastapi-app-container
-    # Map port 3027 on the host to port 8000 in the container
     ports:
+      # We map port 8000 inside the container to port 3027 on the host
       - "3027:8000"
-    # Restart the container
-    restart: unless-stopped
+    volumes:
+      # Mount the local folder to store uploaded images
+      - ./fastapi-app/uploads:/app/uploads
+    restart: always
+
+  # New service for the QR Code Generator frontend
+  qr-code-frontend:
+    build:
+      context: ./my-qrcode-app
+      dockerfile: Dockerfile
+    container_name: qrcode-app-container
+    ports:
+      # Map the container's port to port 3028 on the host for Nginx Proxy Manager
+      - "3028:80"
+    restart: always
+
+  # New service for the Photo Uploader frontend
+  photo-uploader-frontend:
+    build:
+      context: ./my-photo-uploader-app
+      dockerfile: Dockerfile
+    container_name: photo-uploader-app-container
+    ports:
+      # Map the container's port to port 3029 on the host for Nginx Proxy Manager
+      - "3029:80"
+    restart: always

@@ -40,8 +40,9 @@ const PhotoUploader = ({ vehicleNumber }) => {
         formData.append('files', file); // Note: we are now appending with 'files'
       });
       
-      // Use the correct API URL and pass the vehicle number
-      const response = await fetch(`https://vehicledamage.molyneaux.xyz/upload_photos?vehicle_number=${vehicleNumber}`, {
+      // *** IMPORTANT CHANGE ***
+      // Now using the dedicated API domain for the upload endpoint
+      const response = await fetch(`https://api.molyneaux.xyz/upload_photos?vehicle_number=${vehicleNumber}`, {
         method: 'POST',
         body: formData,
       });
@@ -113,14 +114,12 @@ const PhotoUploader = ({ vehicleNumber }) => {
 
 
 function App() {
-  // Use state to track the current view (qr_generator or photo_uploader)
   const [currentPage, setCurrentPage] = useState('qr_generator');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check the URL for a vehicle number to determine the page to show
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const vehicle = urlParams.get('vehicle');
@@ -136,7 +135,9 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://qrcode.molyneaux.xyz/qr_code', {
+      // *** IMPORTANT CHANGE ***
+      // Now using the dedicated API domain for the qr_code endpoint
+      const response = await fetch('https://api.molyneaux.xyz/qr_code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,12 +162,10 @@ function App() {
     }
   };
 
-  // Render the appropriate component based on the current page state
   if (currentPage === 'photo_uploader') {
     return <PhotoUploader vehicleNumber={vehicleNumber} />;
   }
 
-  // Default view: QR code generator
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="p-8 bg-white rounded-xl shadow-lg w-full max-w-md">

@@ -1,39 +1,80 @@
-# docker-compose.yml
-version: '3.8'
+version: '3.0'
 
 services:
-  # The FastAPI backend service
-  fastapi-app:
-    build:
-      context: ./fastapi-app
-      dockerfile: Dockerfile
-    container_name: fastapi-app-container
-    ports:
-      # We map port 8000 inside the container to port 3027 on the host
-      - "3027:8000"
+  # 1. QR Code Frontend (The app that was throwing the 502)
+  qrcode-app:
+    image: trealnyce/qrcode-app:latest
+    container_name: qrcode-app
+    networks:
+      - trealnyce_app_network
+    depends_on:
+      - fastapi-backend
+  
+  # 2. Photo Uploader Frontend
+  photo-uploader-app:
+    image: trealnyce/vehicle-photo-uploader:latest
+    container_name: photo-uploader-app
+    networks:
+      - trealnyce_app_network
+
+  # 3. Photo Viewer Frontend
+  photo-viewer-app:
+    image: trealnyce/photo-viewer:latest
+    container_name: photo-viewer-app
+    networks:
+      - trealnyce_app_network
+    depends_on:
+      - fastapi-backend
+
+  # 4. Application Backend Service (FastAPI)
+  fastapi-backend:
+    build: . # Requires Git Repository deployment method to find Dockerfile
+    container_name: fastapi-backend
+    environment:
+      # Database Credentials (Embedded and Quoted)
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+      DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
+      API_KEY: '@It31c8My^a%b$v!' 
+      NFS_MOUNT_PATH: /app/uploads
+    networks:
+      - trealnyce_app_network
+      - internal-network
     volumes:
-      # Mount the local folder to store uploaded images
-      - ./fastapi-app/uploads:/app/uploads
-    restart: always
+      - photo-storage:/app/uploads # Links to the NAS volume below
+    depends_on:
+      - database
+    restart: unless-stopped
 
-  # New service for the QR Code Generator frontend
-  qr-code-frontend:
-    build:
-      context: ./my-qrcode-app
-      dockerfile: Dockerfile
-    container_name: qrcode-app-container
-    ports:
-      # Map the container's port to port 3028 on the host for Nginx Proxy Manager
-      - "3028:80"
+  # 5. Database Service (Postgres)
+  database:
+    image: postgres:13
+    container_name: postgres-db
     restart: always
+    environment:
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal-network
 
-  # New service for the Photo Uploader frontend
-  photo-uploader-frontend:
-    build:
-      context: ./my-photo-uploader-app
-      dockerfile: Dockerfile
-    container_name: photo-uploader-app-container
-    ports:
-      # Map the container's port to port 3029 on the host for Nginx Proxy Manager
-      - "3029:80"
-    restart: always
+networks:
+  trealnyce_app_network:
+    external: true
+  internal-network:
+    internal: true
+
+volumes:
+  db-data:
+    driver: local
+  photo-storage:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      # Synology NAS Configuration
+      o: "addr=192.168.1.231,nfsvers=4,rw" 
+      device: ":/volume1/approved/photos/trucks" # Note the mandatory leading colon and slash
+

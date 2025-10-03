@@ -1,23 +1,79 @@
-# Example Root Dockerfile (Only restore this if you need it)
-# Stage 1: Build the backend
-FROM python:3.11-slim as backend-builder
-WORKDIR /app
-COPY ./fastapi-app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY ./fastapi-app .
+version: '3.0'
 
-# Stage 2: Build the frontend (Assuming you use Node/NPM)
-FROM node:20-alpine as frontend-builder
-WORKDIR /app/frontend
-COPY ./my-qrcode-app/package.json .
-COPY ./my-qrcode-app/package-lock.json .
-RUN npm install
-COPY ./my-qrcode-app .
-RUN npm run build
+services:
+  # 1. QR Code Frontend
+  qrcode-app:
+    image: trealnyce/qrcode-app:latest
+    container_name: qrcode-app
+    networks:
+      - trealnyce_app_network
+    depends_on:
+      - fastapi-backend
+  
+  # 2. Photo Uploader Frontend
+  photo-uploader-app:
+    image: trealnyce/vehicle-photo-uploader:latest
+    container_name: photo-uploader-app
+    networks:
+      - trealnyce_app_network
 
-# Stage 3: Final Nginx container
-FROM nginx:alpine
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
-COPY ./nginx-config/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+  # 3. Photo Viewer Frontend
+  photo-viewer-app:
+    image: trealnyce/photo-viewer:latest
+    container_name: photo-viewer-app
+    networks:
+      - trealnyce_app_network
+    depends_on:
+      - fastapi-backend
+
+  # 4. Application Backend Service (FastAPI)
+  fastapi-backend:
+    build:
+      context: ./fastapi-app 
+      dockerfile: Dockerfile
+    container_name: fastapi-backend
+    environment:
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+      DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
+      API_KEY: '@It31c8My^a%b$v!' 
+      NFS_MOUNT_PATH: /app/uploads
+    networks:
+      - trealnyce_app_network
+      - internal-network
+    volumes:
+      - photo-storage:/app/uploads
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  # 5. Database Service (Postgres)
+  database:
+    image: postgres:13
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal-network
+
+networks:
+  trealnyce_app_network:
+    external: true
+  internal-network:
+    internal: true
+
+volumes:
+  db-data:
+    driver: local
+  photo-storage:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.1.231,nfsvers=4,rw" 
+      device: ":/volume1/approved/photos/trucks"

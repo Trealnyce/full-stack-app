@@ -1,4 +1,4 @@
-version: '3.0'
+version: '3.4'
 
 services:
   # 1. QR Code Frontend
@@ -10,14 +10,14 @@ services:
     depends_on:
       - fastapi-backend
   
-  # 2. Photo Uploader Frontend
+  # 2. Photo Uploader Frontend (Re-added)
   photo-uploader-app:
     image: trealnyce/vehicle-photo-uploader:latest
     container_name: photo-uploader-app
     networks:
       - trealnyce_app_network
 
-  # 3. Photo Viewer Frontend
+  # 3. Photo Viewer Frontend (Re-added)
   photo-viewer-app:
     image: trealnyce/photo-viewer:latest
     container_name: photo-viewer-app
@@ -42,6 +42,7 @@ services:
     networks:
       - trealnyce_app_network
       - internal-network
+    # RE-ADDED: NFS Volume Mount
     volumes:
       - photo-storage:/app/uploads
     depends_on:
@@ -71,6 +72,7 @@ networks:
 volumes:
   db-data:
     driver: local
+  # RE-ADDED: NFS Volume Definition
   photo-storage:
     driver: local
     driver_opts:

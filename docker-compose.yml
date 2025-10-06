@@ -1,32 +1,29 @@
 version: '3.4'
 
 services:
-  # 1. QR Code Frontend
+  # 1. QR Code Frontend (External Port: 3028)
   qrcode-app:
     image: trealnyce/qrcode-app:latest
     container_name: qrcode-app
     networks:
       - trealnyce_app_network
+    # Mapped to 3028 for qrcode.molyneaux.xyz
+    ports:
+      - "3028:80"
     depends_on:
       - fastapi-backend
   
-  # 2. Photo Uploader Frontend (Re-added)
+  # 2. Photo Uploader Frontend (External Port: 3029)
   photo-uploader-app:
     image: trealnyce/vehicle-photo-uploader:latest
     container_name: photo-uploader-app
     networks:
       - trealnyce_app_network
+    # Mapped to 3029 for vehicledamage.molyneaux.xyz
+    ports:
+      - "3029:80"
 
-  # 3. Photo Viewer Frontend (Re-added)
-  photo-viewer-app:
-    image: trealnyce/photo-viewer:latest
-    container_name: photo-viewer-app
-    networks:
-      - trealnyce_app_network
-    depends_on:
-      - fastapi-backend
-
-  # 4. Application Backend Service (FastAPI)
+  # 3. Application Backend Service (FastAPI) (External Port: 3027)
   fastapi-backend:
     build:
       context: ./fastapi-app 
@@ -42,14 +39,16 @@ services:
     networks:
       - trealnyce_app_network
       - internal-network
-    # RE-ADDED: NFS Volume Mount
+    # Mapped to 3027 for api.molyneaux.xyz (FastAPI's internal port is 8000)
+    ports:
+      - "3027:8000"
     volumes:
       - photo-storage:/app/uploads
     depends_on:
       - database
     restart: unless-stopped
 
-  # 5. Database Service (Postgres)
+  # 4. Database Service (Postgres)
   database:
     image: postgres:13
     container_name: postgres-db
@@ -72,7 +71,6 @@ networks:
 volumes:
   db-data:
     driver: local
-  # RE-ADDED: NFS Volume Definition
   photo-storage:
     driver: local
     driver_opts:

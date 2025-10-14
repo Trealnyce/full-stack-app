@@ -1,4 +1,9 @@
 fastapi
-uvicorn
-pydantic
+uvicorn[standard]
 python-multipart
+qrcode
+psycopg2-binary
+sqlalchemy
+python-jose
+passlib[bcrypt]
+qrcode[pil]

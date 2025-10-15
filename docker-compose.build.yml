@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  qr-code-app:
+    build:
+      context: ./my-qrcode-app
+    image: trealnyce/approved-qrcode:latest
+    container_name: qr-code-app
+
+  photo-uploader-app:
+    build:
+      context: ./my-photo-uploader-app
+    image: trealnyce/approved-photo-uploader:latest
+    container_name: photo-uploader-app
+
+  photo-viewer-app:
+    build:
+      context: ./my-photo-viewer-app
+    image: trealnyce/approved-photo-viewer:latest
+    container_name: photo-viewer-app
+
+  fastapi-backend:
+    build:
+      context: ./fastapi-app
+    image: trealnyce/approved-fastapi-backend:latest
+    container_name: fastapi-backend

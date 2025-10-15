@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Inspection System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        
+        <!-- Login Section -->
+        <div id="login-section">
+            <h2 class="text-2xl font-bold text-center">Admin Login</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="text-sm font-medium">Username</label>
+                    <input type="text" id="username" name="username" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-medium">Password</label>
+                    <input type="password" id="password" name="password" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Login & Get QR Code
+                </button>
+            </form>
+        </div>
+
+        <!-- QR Code Display Section -->
+        <div id="qr-section" class="hidden text-center space-y-4">
+            <h2 class="text-2xl font-bold">Inspection QR Code</h2>
+            <p class="text-gray-600">Driver should scan this code to begin the upload process.</p>
+            <div id="qr-code-container" class="flex justify-center p-4 border rounded-md">
+                <img id="qr-code-img" src="" alt="QR Code" class="max-w-full h-auto">
+            </div>
+        </div>
+
+        <!-- Photo Upload Section -->
+        <div id="upload-section" class="hidden space-y-4">
+            <h2 class="text-2xl font-bold text-center">Manual Photo Upload</h2>
+             <form id="upload-form" class="space-y-4">
+                <div>
+                    <label for="vehicle_id" class="text-sm font-medium">Vehicle ID (e.g., CT101)</label>
+                    <input type="text" id="vehicle_id" name="vehicle_id" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="latitude" class="text-sm font-medium">Latitude</label>
+                    <input type="number" step="any" id="latitude" name="latitude" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                 <div>
+                    <label for="longitude" class="text-sm font-medium">Longitude</label>
+                    <input type="number" step="any" id="longitude" name="longitude" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="file" class="text-sm font-medium">Photo</label>
+                    <input type="file" id="file" name="file" accept="image/*" required class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100">
+                </div>
+                <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Upload Photo
+                </button>
+            </form>
+        </div>
+
+        <!-- Status Message Area -->
+        <div id="status-message" class="text-center p-2 rounded-md"></div>
+    </div>
+
+    <script>
+        // --- CRITICAL CONFIGURATION ---
+        // This is the public-facing URL of your backend API, routed by Nginx Proxy Manager.
+        const API_BASE_URL = 'https://api.molyneaux.xyz';
+
+        // --- STATE MANAGEMENT ---
+        let accessToken = null;
+
+        // --- DOM ELEMENTS ---
+        const loginSection = document.getElementById('login-section');
+        const qrSection = document.getElementById('qr-section');
+        const uploadSection = document.getElementById('upload-section');
+        
+        const loginForm = document.getElementById('login-form');
+        const uploadForm = document.getElementById('upload-form');
+        
+        const qrCodeImg = document.getElementById('qr-code-img');
+        const statusMessage = document.getElementById('status-message');
+
+        // --- EVENT LISTENERS ---
+        loginForm.addEventListener('submit', handleLogin);
+        uploadForm.addEventListener('submit', handleUpload);
+
+        // --- FUNCTIONS ---
+        
+        /**
+         * Handles the login form submission.
+         */
+        async function handleLogin(event) {
+            event.preventDefault();
+            const formData = new FormData(loginForm);
+            
+            setStatus('Logging in...', 'blue');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/token`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Login failed');
+                }
+
+                const data = await response.json();
+                accessToken = data.access_token;
+                
+                setStatus('Login successful! Fetching QR Code...', 'green');
+                
+                // On successful login, fetch the QR code
+                await fetchQrCode();
+
+                // Update UI
+                loginSection.classList.add('hidden');
+                qrSection.classList.remove('hidden');
+                uploadSection.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Login Error:', error);
+                setStatus(error.message, 'red');
+            }
+        }
+
+        /**
+         * Fetches the QR code from the protected endpoint.
+         */
+        async function fetchQrCode() {
+            if (!accessToken) {
+                setStatus('You are not logged in.', 'red');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate-qr-code`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not fetch QR code.');
+                }
+                
+                // The response is an image blob, not JSON
+                const imageBlob = await response.blob();
+                const imageUrl = URL.createObjectURL(imageBlob);
+                qrCodeImg.src = imageUrl;
+                
+            } catch (error) {
+                console.error('QR Code Fetch Error:', error);
+                setStatus(error.message, 'red');
+            }
+        }
+
+        /**
+         * Handles the photo upload form submission.
+         */
+        async function handleUpload(event) {
+            event.preventDefault();
+            if (!accessToken) {
+                setStatus('You must be logged in to upload.', 'red');
+                return;
+            }
+            
+            const formData = new FormData(uploadForm);
+            setStatus('Uploading photo...', 'blue');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload/photo/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Upload failed');
+                }
+
+                const result = await response.json();
+                console.log('Upload Result:', result);
+                setStatus(`Success: ${result.message}`, 'green');
+                uploadForm.reset(); // Clear the form on success
+
+            } catch (error) {
+                console.error('Upload Error:', error);
+                setStatus(`Upload Error: ${error.message}`, 'red');
+            }
+        }
+
+        /**
+         * Displays a status message to the user.
+         */
+        function setStatus(message, color) {
+            statusMessage.textContent = message;
+            statusMessage.className = `p-2 rounded-md text-center text-sm font-medium`;
+            if (color === 'red') {
+                 statusMessage.classList.add('bg-red-100', 'text-red-800');
+            } else if (color === 'green') {
+                 statusMessage.classList.add('bg-green-100', 'text-green-800');
+            } else { // blue
+                 statusMessage.classList.add('bg-blue-100', 'text-blue-800');
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -60,7 +60,11 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    # bcrypt has a 72-byte limit; truncate the password to prevent errors.
+    # We encode to bytes to be precise about the 72-byte limit.
+    truncated_password = password.encode('utf-8')[:72]
+    return pwd_context.hash(truncated_password)
+
 
 # --- JWT Token Handling ---
 SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key")

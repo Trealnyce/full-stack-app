@@ -1,60 +1,20 @@
-version: '3.0'
+# 1. Use an official Python runtime as a parent image
+FROM python:3.11-slim
 
-services:
-  # 1. QR Code Frontend
-  qrcode-app:
-    image: trealnyce/qrcode-app:latest
-    container_name: qrcode-app
-    networks:
-      - trealnyce_app_network
-    depends_on:
-      - fastapi-backend
-  
-  # 2. Application Backend Service (FastAPI)
-  fastapi-backend:
-    # Build from context, now that we know the path is fixed
-    build:
-      context: ./fastapi-app 
-      dockerfile: Dockerfile
-    container_name: fastapi-backend
-    environment:
-      POSTGRES_USER: trealnyce
-      POSTGRES_PASSWORD: Approved110$$
-      POSTGRES_DB: photo_db
-      DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
-      API_KEY: '@It31c8My^a%b$v!' 
-      NFS_MOUNT_PATH: /app/uploads
-    # Temporarily remove NFS volume mount
-    # volumes:
-    #   - photo-storage:/app/uploads 
-    networks:
-      - trealnyce_app_network
-      - internal-network
-    depends_on:
-      - database
-    restart: unless-stopped
+# 2. Set the working directory in the container
+WORKDIR /app
 
-  # 3. Database Service (Postgres)
-  database:
-    image: postgres:13
-    container_name: postgres-db
-    restart: always
-    environment:
-      POSTGRES_USER: trealnyce
-      POSTGRES_PASSWORD: Approved110$$
-      POSTGRES_DB: photo_db
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    networks:
-      - internal-network
+# 3. Copy the requirements file first to leverage Docker cache
+COPY requirements.txt requirements.txt
 
-networks:
-  trealnyce_app_network:
-    external: true
-  internal-network:
-    internal: true
+# 4. Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-volumes:
-  db-data:
-    driver: local
-  # Temporarily remove photo-storage volume definition
+# 5. Copy the rest of the application code into the container
+COPY . .
+
+# 6. Make port 8000 available to the world outside this container
+EXPOSE 8000
+
+# 7. Define the command to run your app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

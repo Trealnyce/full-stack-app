@@ -23,7 +23,7 @@ services:
 
   # 3. Application Backend Service (FastAPI) (External Port: 3027)
   fastapi-backend:
-    image: trealnyce/fastapi-backend:latest
+    image: trealnyce/fastapi-backend:v1.1
     container_name: fastapi-backend
     environment:
       POSTGRES_USER: trealnyce

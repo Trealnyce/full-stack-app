@@ -22,10 +22,13 @@ try:
 except ImportError:
     print("python-dotenv not found, assuming environment variables are set.")
 
-# --- Database Setup ---
-DATABASE_URL = os.getenv("DATABASE_URL")
+# --- Database Setup (HARDCODE FOR FINAL DEPLOYMENT) ---
+# NOTE: The database password is Approved110$$
+DATABASE_URL = "postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db"
+
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set.")
+    # This block is now unreachable since the URL is hardcoded, but kept for safety
+    raise ValueError("DATABASE_URL variable is not set.")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -51,6 +54,7 @@ class User(Base):
     hashed_password = Column(String)
 
 # Create the database table
+# This is the line that was crashing due to the bad connection string
 Base.metadata.create_all(bind=engine)
 
 # --- Password Hashing ---
@@ -224,4 +228,3 @@ async def upload_vehicle_photo(
         "uploader": current_user.username,
         "stored_path": file_location
     }
-

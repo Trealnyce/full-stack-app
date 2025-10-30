@@ -21,7 +21,7 @@ services:
     ports:
       - "3029:80"
 
-  # 3. Application Backend Service (FastAPI) (External Port: 3027)
+  # 3. Application Backend Service (FastAPI)
   fastapi-backend:
     image: trealnyce/fastapi-backend:v1.2
     container_name: fastapi-backend

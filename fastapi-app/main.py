@@ -15,35 +15,29 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 
 # --- Configuration and Environment Variables ---
-# Load environment variables from .env file
+# Load environment variables from .env file (kept, but DB URL is hardcoded)
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     print("python-dotenv not found, assuming environment variables are set.")
 
-# --- Database Setup (HARDCODE FOR FINAL DEPLOYMENT) ---
-# NOTE: The database password is Approved110$$
+# --- Database Setup (HARDCODED CONNECTION STRING) ---
+# This bypasses potential environment variable reading issues.
+# It MUST match the POSTGRES_PASSWORD in your docker-compose.yml (Approved110$$)
 DATABASE_URL = "postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db"
-
-if not DATABASE_URL:
-    # This block is now unreachable since the URL is hardcoded, but kept for safety
-    raise ValueError("DATABASE_URL variable is not set.")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # --- NEW: Logging Setup ---
-# Basic logging configuration to see output in Docker logs
 logging.basicConfig(level=logging.INFO)
 
 # --- NEW: File Storage Configuration ---
-# The path inside the Docker container where the NFS volume is mounted
 PHOTO_STORAGE_PATH = "/volume1/approved/photos/trucks"
-# A check to warn if the mount point doesn't seem to be available
 if not os.path.isdir(PHOTO_STORAGE_PATH):
-    logging.warning(f"Photo storage path does not exist: {PHOTO_STORAGE_PATH}. Ensure the volume is mounted correctly in docker-compose.yml.")
+    logging.warning(f"Photo storage path does not exist: {PHOTO_STORAGE_PATH}. Ensure the volume is mounted correctly.")
 
 
 # --- Database Model ---
@@ -53,9 +47,6 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
-# Create the database table
-# This is the line that was crashing due to the bad connection string
-Base.metadata.create_all(bind=engine)
 
 # --- Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -64,26 +55,46 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    # bcrypt has a 72-byte limit; truncate the password to prevent errors.
-    # We encode to bytes to be precise about the 72-byte limit.
+    # Fix for ValueError: password cannot be longer than 72 bytes
     truncated_password = password.encode('utf-8')[:72]
     return pwd_context.hash(truncated_password)
 
 
-# --- JWT Token Handling ---
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# --- ADMIN USER SEEDING LOGIC (Runs on Startup) ---
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "Approved123" # <--- LOGIN PASSWORD!
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def initialize_admin_user(db: Session):
+    """Checks for the admin user and creates it if missing."""
+    try:
+        # Check if the database connection is available
+        db.connection() 
+    except Exception as e:
+        logging.error(f"FATAL: Database connection failed during startup check. Error: {e}")
+        return
+
+    existing_user = db.query(User).filter(User.username == ADMIN_USERNAME).first()
+
+    if not existing_user:
+        hashed_password = get_password_hash(ADMIN_PASSWORD)
+        new_user = User(username=ADMIN_USERNAME, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        logging.info(f"SUCCESS: Default admin user '{ADMIN_USERNAME}' created.")
+    # No need for an 'else', we log the success/skip and exit.
+
+# --- Application Startup Sequence ---
+
+# Create the database table
+# This must run before the application starts listening
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    logging.error(f"CRITICAL ERROR: Failed to create database tables. Check postgres container logs. {e}")
+    # Application will crash here if DB is unreachable or authentication fails.
+
+# Initialize the admin user immediately after tables are ready
+initialize_admin_user(SessionLocal()) 
 
 # --- FastAPI Application ---
 app = FastAPI()
@@ -124,7 +135,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 @app.post("/register")
 def register_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
-    Registers a new user in the database.
+    Registers a new user in the database. (Used for non-admin users)
     """
     existing_user = db.query(User).filter(User.username == form_data.username).first()
     if existing_user:
@@ -160,13 +171,11 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
 @app.get("/generate-qr-code", response_class=Response)
 def generate_qr_code(
-    # This endpoint is protected. A valid token is required to access it.
     current_user: User = Depends(get_current_user)
 ):
     """
-    Generates a QR code for a logged-in user. The content of the QR code is the user's username.
+    Generates a QR code for a logged-in user.
     """
-    # The QR code content is now tied to the authenticated user
     qr_content = f"Logged in user: {current_user.username}"
     
     img = qrcode.make(qr_content)
@@ -178,18 +187,14 @@ def generate_qr_code(
 # --- NEW: Photo Upload Endpoint ---
 @app.post("/upload/photo/")
 async def upload_vehicle_photo(
-    # These parameters will be sent as form data from the client
     vehicle_id: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
     file: UploadFile = File(...),
-    # This endpoint is now protected, just like the QR code generator.
-    # An unauthorized user cannot upload files.
     current_user: User = Depends(get_current_user)
 ):
     """
-    Receives a photo and metadata from an authenticated user, 
-    creates a vehicle-specific folder, and saves the geo- and time-stamped photo.
+    Receives a photo and metadata from an authenticated user.
     """
     logging.info(f"User '{current_user.username}' initiated photo upload for vehicle: {vehicle_id}")
 
@@ -207,7 +212,7 @@ async def upload_vehicle_photo(
     # 3. Create a unique, descriptive filename
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_extension = os.path.splitext(file.filename)[1]
-    if not file_extension: # Add a default extension if none is found
+    if not file_extension:
         file_extension = ".jpg"
     filename = f"{timestamp}_lat{latitude}_lon{longitude}{file_extension}"
     file_location = os.path.join(vehicle_folder_path, filename)
@@ -215,7 +220,6 @@ async def upload_vehicle_photo(
     # 4. Save the file to the NAS
     try:
         with open(file_location, "wb+") as file_object:
-            # await file.read() is used because this is an async function
             file_object.write(await file.read())
         logging.info(f"Successfully saved file to: {file_location}")
     except Exception as e:

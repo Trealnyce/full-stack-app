@@ -1,9 +1,9 @@
 fastapi
 uvicorn[standard]
-python-multipart
-qrcode
-psycopg2-binary
 sqlalchemy
-python-jose
+psycopg2-binary
 passlib[bcrypt]
+python-jose[cryptography]
 qrcode[pil]
+python-dotenv
+python-multipart

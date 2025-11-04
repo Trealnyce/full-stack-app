@@ -1,79 +1,74 @@
 version: '3.4'
 
 services:
+  # 1. QR Code Frontend
+  qrcode-app:
+    image: trealnyce/qrcode-app:latest
+    container_name: qrcode-app
+    networks:
+      - trealnyce_app_network
+    ports:
+      - "3028:80"
+    depends_on:
+      - fastapi-backend
+  
+  # 2. Photo Uploader Frontend
+  photo-uploader-app:
+    image: trealnyce/vehicle-photo-uploader:latest
+    container_name: photo-uploader-app
+    networks:
+      - trealnyce_app_network
+    ports:
+      - "3029:80"
 
-1. QR Code Frontend
+  # 3. Application Backend Service (FastAPI)
+  fastapi-backend:
+    image: trealnyce/fastapi-backend:v1.3
+    container_name: fastapi-backend
+    environment:
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+      DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
+      API_KEY: '@It31c8My^a%b$v!' 
+      NFS_MOUNT_PATH: /app/uploads
+    networks:
+      - trealnyce_app_network
+      - internal-network
+    ports:
+      - "3027:8000"
+    volumes:
+      - photo-storage:/app/uploads
+    depends_on:
+      - database
+    restart: unless-stopped
 
-qrcode-app:
-image: trealnyce/qrcode-app:latest
-container_name: qrcode-app
-networks:
-- trealnyce_app_network
-ports:
-- "3028:80"
-depends_on:
-- fastapi-backend
-
-2. Photo Uploader Frontend
-
-photo-uploader-app:
-image: trealnyce/vehicle-photo-uploader:latest
-container_name: photo-uploader-app
-networks:
-- trealnyce_app_network
-ports:
-- "3029:80"
-
-3. Application Backend Service (FastAPI)
-
-fastapi-backend:
-image: trealnyce/fastapi-backend:v1.3  # <-- Using brand new tag
-container_name: fastapi-backend
-environment:
-POSTGRES_USER: trealnyce
-POSTGRES_PASSWORD: Approved110$$
-POSTGRES_DB: photo_db
-DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
-API_KEY: '@It31c8My^a%b$v!'
-NFS_MOUNT_PATH: /app/uploads
-networks:
-- trealnyce_app_network
-- internal-network
-ports:
-- "3027:8000"
-volumes:
-- photo-storage:/app/uploads
-depends_on:
-- database
-restart: unless-stopped
-
-4. Database Service (Postgres)
-
-database:
-image: postgres:13
-container_name: postgres-db
-restart: always
-environment:
-POSTGRES_USER: trealnyce
-POSTGRES_PASSWORD: Approved110$$
-POSTGRES_DB: photo_db
-volumes:
-- db-data:/var/lib/postgresql/data
-networks:
-- internal-network
+  # 4. Database Service (Postgres)
+  database:
+    image: postgres:13
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: trealnyce
+      POSTGRES_PASSWORD: Approved110$$
+      POSTGRES_DB: photo_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal-network
 
 networks:
-trealnyce_app_network:
-external: true
-internal-network:
-internal: true
+  trealnyce_app_network:
+    external: true
+  internal-network:
+    internal: true
 
 volumes:
-db-data:
-driver: local
-photo-storage:
-driver: local
-driver_opts:
-type: "nfs"
-o: "addr=192.168.1.231,nfsvers=4,rw"
-device: ":/volume1/approved/photos/trucks"
+  db-data:
+    driver: local
+  photo-storage:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.1.231,nfsvers=4,rw" 
+      device: ":/volume1/approved/photos/trucks"

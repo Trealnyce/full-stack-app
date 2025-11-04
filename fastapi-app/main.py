@@ -5,6 +5,7 @@ from io import BytesIO
 from datetime import datetime, timedelta
 from typing import Optional
 
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
 from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -98,6 +99,13 @@ initialize_admin_user(SessionLocal())
 
 # --- FastAPI Application ---
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://qrcode.molyneaux.xyz"], # Allow your frontend
+    allow_credentials=True,
+    allow_methods=["*"], # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allow all headers
+)
 
 # OAuth2 for token-based authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

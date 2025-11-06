@@ -4,7 +4,6 @@ import logging
 from io import BytesIO
 from datetime import datetime, timedelta
 from typing import Optional
-
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
 from fastapi.responses import Response

@@ -23,12 +23,13 @@ services:
 
   # 3. Application Backend Service (FastAPI)
   fastapi-backend:
-    image: trealnyce/fastapi-backend:v1.3
+    image: trealnyce/fastapi-backend:v1.3 # Using your latest verified image
     container_name: fastapi-backend
     environment:
+      # We still need these variables, but the password is pulled from the Secret file below
       POSTGRES_USER: trealnyce
-      POSTGRES_PASSWORD: Approved110$$
       POSTGRES_DB: photo_db
+      # The hardcoded DATABASE_URL *must* still match the secret content
       DATABASE_URL: postgresql://trealnyce:Approved110$$@postgres-db:5432/photo_db
       API_KEY: '@It31c8My^a%b$v!' 
       NFS_MOUNT_PATH: /app/uploads
@@ -41,7 +42,7 @@ services:
       - photo-storage:/app/uploads
     depends_on:
       - database
-    restart: unless-stopped
+    restart: on-failure
 
   # 4. Database Service (Postgres)
   database:
@@ -50,21 +51,21 @@ services:
     restart: always
     environment:
       POSTGRES_USER: trealnyce
-      POSTGRES_PASSWORD: Approved110$$
       POSTGRES_DB: photo_db
-    volumes:
-      - db-data:/var/lib/postgresql/data
+      # Postgres will read the password from the secret mount
+    secrets:
+      - postgres_password
     networks:
       - internal-network
 
 networks:
   trealnyce_app_network:
-    external: true
+    external: false
   internal-network:
     internal: true
 
 volumes:
-  db-data:
+  db-data-final-fix:
     driver: local
   photo-storage:
     driver: local
@@ -72,3 +73,7 @@ volumes:
       type: "nfs"
       o: "addr=192.168.1.231,nfsvers=4,rw" 
       device: ":/volume1/approved/photos/trucks"
+      
+secrets:
+  postgres_password:
+    file: ./postgres_password.txt
